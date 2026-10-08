@@ -1,7 +1,7 @@
 {
   "name": "skill-miner",
-  "version": "0.4.0",
-  "description": "Mines your own Claude Code transcripts for repeated workflows and corrections, proposes skills or memories, and installs only the ones you approve.",
+  "version": "0.5.0",
+  "description": "Mines your own Claude Code, Codex and Cursor transcripts for repeated workflows and corrections, proposes skills or memories, and installs only the ones you approve.",
   "author": {
     "name": "Nick Zdanovych"
   },

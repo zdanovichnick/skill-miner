@@ -2,34 +2,50 @@
 'use strict';
 // Which skill-miner-generated skills have never been invoked since they were installed?
 //
-// Usage: node prune.js [--grace-days 14] [--grace-sessions 10] [--root ~/.claude/projects]
-//                      [--skills ~/.claude/skills] [--state ~/.claude/skill-miner] [--out <dir>]
-//        node prune.js --remove <name>[,<name>...]
+// Usage: node prune.js [--grace-days 14] [--grace-sessions 10] [--targets all|claude,agents,cursor]
+//                      [--root ~/.claude/projects] [--codex-root ~/.codex] [--cursor-root ~/.cursor/projects]
+//                      [--skills ~/.claude/skills] [--agents-skills ~/.agents/skills] [--cursor-skills ~/.cursor/skills]
+//                      [--state ~/.claude/skill-miner] [--out <dir>]
+//        node prune.js --remove <name|tool:name>[,...]     (tool is claude, agents or cursor; bare name means claude)
 //
-// A generated skill is one listed with target "skill" in <state>/installed.json, or any
-// <skills>/<name>/ holding the PROVENANCE.md that /skill-miner:accept writes beside it. A trigger is
-// a Skill tool call naming it or the person typing /<name>; nothing else in a transcript is read.
-// A skill younger than the grace period, in days or in sessions since install, is "too new" rather
-// than "never".
+// A generated skill is one listed with target "skill" in <state>/installed.json (its `tool` field says
+// which skill folder it went to, claude when absent), or any <skills>/<name>/ holding the PROVENANCE.md
+// that the installer writes beside it. A trigger is the way each tool itself invokes a skill:
+//   Claude Code  a Skill tool call naming it, or the person typing /<name>
+//   Codex        the person typing $<name>, or a command that reads <name>/SKILL.md or runs <name>/scripts
+//   Cursor       the person typing /<name>, or a tool call that reads <name>/SKILL.md
+// Only transcripts of the tools that load a skill's folder are consulted for it. A skill younger than
+// the grace period, in days or in sessions since install, is "too new" rather than "never".
 //
-// --remove moves each named folder to <state>/pruned/<date>/<name>/ (reversible by moving it back),
-// marks it pruned in installed.json and decisions.json, and exits.
+// --remove moves each named folder to <state>/pruned/<date>/<name>/ (<tool>@<name> for the Codex/Cursor
+// folders; reversible by moving it back), marks it pruned in installed.json and decisions.json, and exits.
 
 const fs = require('node:fs');
 const path = require('node:path');
-const os = require('node:os');
-const readline = require('node:readline');
+const T = require('./lib/text');
+const { SOURCES, SKILL_TARGETS, CAN_ZSTD } = require('./lib/sources');
 
-const SKILL_CALL = '"name":"Skill"';
-const SLASH = '<command-name>';
-const SLASH_RE = /<command-name>\/?([^<]+)<\/command-name>/g;
+const TARGET_IDS = Object.keys(SKILL_TARGETS);
 
+// `targets` defaults to the Claude folder alone here, so a caller that builds options by hand keeps
+// reading only what it points at; the command line passes `all`.
 function options(args) {
+  const dirs = {
+    claude: T.expandHome(args.skills ?? SKILL_TARGETS.claude.dir()),
+    agents: T.expandHome(args['agents-skills'] ?? SKILL_TARGETS.agents.dir()),
+    cursor: T.expandHome(args['cursor-skills'] ?? SKILL_TARGETS.cursor.dir()),
+  };
+  const wanted = args.targets === undefined ? ['claude'] : args.targets === 'all' ? TARGET_IDS : String(args.targets).split(',').map(x => x.trim()).filter(Boolean);
+  for (const id of wanted) if (!SKILL_TARGETS[id]) throw new Error(`unknown target "${id}" (expected claude, agents, cursor or all)`);
   return {
-    root: expandHome(args.root ?? '~/.claude/projects'),
-    skills: expandHome(args.skills ?? '~/.claude/skills'),
-    state: expandHome(args.state ?? '~/.claude/skill-miner'),
-    out: args.out ? expandHome(args.out) : null,
+    root: T.expandHome(args.root ?? '~/.claude/projects'),
+    codexRoot: T.expandHome(args['codex-root'] ?? SOURCES.codex.defaultRoot()),
+    cursorRoot: T.expandHome(args['cursor-root'] ?? SOURCES.cursor.defaultRoot()),
+    skills: dirs.claude,
+    dirs,
+    targets: wanted,
+    state: T.expandHome(args.state ?? '~/.claude/skill-miner'),
+    out: args.out ? T.expandHome(args.out) : null,
     graceDays: Number(args['grace-days'] ?? 14),
     graceSessions: Number(args['grace-sessions'] ?? 10),
     now: args.now ? Date.parse(args.now) : Date.now(),
@@ -37,7 +53,7 @@ function options(args) {
 }
 
 async function main(args) {
-  const opts = options(args);
+  const opts = options({ targets: 'all', ...args });
   if (args.remove) {
     const moved = remove(String(args.remove).split(',').map(s => s.trim()).filter(Boolean), opts);
     for (const m of moved) console.log(`[skill-miner] ${m.name}: ${m.status}${m.to ? ` -> ${m.to}` : ''}`);
@@ -46,11 +62,22 @@ async function main(args) {
 
   const skills = generatedSkills(opts);
   const since = skills.length > 0 ? Math.min(...skills.map(s => s.installedAt)) : opts.now;
-  const scan = await scanTriggers(opts.root, new Set(skills.map(s => s.name)), since);
+  const roots = {};
+  for (const id of new Set(skills.flatMap(s => SKILL_TARGETS[s.tool].loadedBy))) {
+    roots[id] = { claude: opts.root, codex: opts.codexRoot, cursor: opts.cursorRoot }[id];
+  }
+  const scan = await scanSources(roots, new Set(skills.map(s => s.name)), since);
   const rows = assess(skills, scan, opts);
   const result = {
     generatedAt: new Date(opts.now).toISOString(),
-    window: { since: new Date(since).toISOString(), files: scan.files, sessions: scan.sessions.length, graceDays: opts.graceDays, graceSessions: opts.graceSessions },
+    window: {
+      since: new Date(since).toISOString(),
+      files: scan.files,
+      sessions: scan.sessions.length,
+      graceDays: opts.graceDays,
+      graceSessions: opts.graceSessions,
+      sources: scan.sources,
+    },
     skills: rows,
   };
 
@@ -64,38 +91,34 @@ async function main(args) {
   console.log(`[skill-miner] never ${count('never')}, too new ${count('too-new')}, used ${count('used')}, missing ${count('missing')}`);
 }
 
-function readJson(file, fallback) {
-  try {
-    return JSON.parse(fs.readFileSync(file, 'utf8'));
-  } catch {
-    return fallback;
-  }
-}
-
 // The ledger first, then any skill folder carrying a PROVENANCE.md the ledger has forgotten.
 function generatedSkills(opts) {
-  const ledger = readJson(path.join(opts.state, 'installed.json'), { installed: [] });
+  const ledger = T.readJson(path.join(opts.state, 'installed.json'), { installed: [] });
   const entries = Array.isArray(ledger.installed) ? ledger.installed : [];
   const skills = [];
   const seen = new Set();
   for (const e of entries) {
-    if (e?.target !== 'skill' || typeof e.name !== 'string' || e.prunedAt) continue;
+    const tool = e?.tool ?? 'claude';
+    if (e?.target !== 'skill' || typeof e.name !== 'string' || e.prunedAt || !opts.targets.includes(tool) || !SKILL_TARGETS[tool]) continue;
     const installedAt = Date.parse(e.installedAt);
-    seen.add(e.name);
-    skills.push({ name: e.name, installedAt: Number.isFinite(installedAt) ? installedAt : 0, runDate: e.runDate ?? null, source: 'installed.json' });
+    seen.add(`${tool}:${e.name}`);
+    skills.push({ name: e.name, tool, installedAt: Number.isFinite(installedAt) ? installedAt : 0, runDate: e.runDate ?? null, source: 'installed.json' });
   }
-  if (fs.existsSync(opts.skills)) {
-    for (const d of fs.readdirSync(opts.skills, { withFileTypes: true })) {
-      if (!d.isDirectory() || seen.has(d.name)) continue;
-      const dir = path.join(opts.skills, d.name);
-      if (!fs.existsSync(path.join(dir, 'PROVENANCE.md')) || !fs.existsSync(path.join(dir, 'SKILL.md'))) continue;
-      const st = fs.statSync(path.join(dir, 'SKILL.md'));
-      skills.push({ name: d.name, installedAt: st.birthtimeMs || st.mtimeMs, runDate: null, source: 'PROVENANCE.md' });
+  for (const tool of opts.targets) {
+    const dir = opts.dirs[tool];
+    if (!fs.existsSync(dir)) continue;
+    for (const d of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (!d.isDirectory() || seen.has(`${tool}:${d.name}`)) continue;
+      const folder = path.join(dir, d.name);
+      if (!fs.existsSync(path.join(folder, 'PROVENANCE.md')) || !fs.existsSync(path.join(folder, 'SKILL.md'))) continue;
+      const st = fs.statSync(path.join(folder, 'SKILL.md'));
+      skills.push({ name: d.name, tool, installedAt: st.birthtimeMs || st.mtimeMs, runDate: null, source: 'PROVENANCE.md' });
     }
   }
   for (const s of skills) {
-    s.present = fs.existsSync(path.join(opts.skills, s.name, 'SKILL.md'));
-    s.description = s.present ? skillDescription(path.join(opts.skills, s.name, 'SKILL.md')) : '';
+    const file = path.join(opts.dirs[s.tool], s.name, 'SKILL.md');
+    s.present = fs.existsSync(file);
+    s.description = s.present ? skillDescription(file) : '';
   }
   return skills.sort((a, b) => a.installedAt - b.installedAt);
 }
@@ -106,55 +129,44 @@ function skillDescription(file) {
   return m ? m[1].trim().replace(/^["']|["']$/g, '').slice(0, 160) : '';
 }
 
-// Every transcript touched since the earliest install, subagents included: a skill a subagent
-// invoked is in use. Sessions are counted from main transcripts only.
-async function scanTriggers(root, names, since) {
-  const files = fs.existsSync(root) ? walk(root).filter(f => f.endsWith('.jsonl') && fs.statSync(f).mtimeMs >= since) : [];
+// Every transcript touched since the earliest install, sub-agents included: a skill a sub-agent
+// invoked is in use. Sessions are counted from main transcripts only. `roots` maps a transcript
+// source to its folder; a folder that does not exist is passed over.
+async function scanSources(roots, names, since) {
   const triggers = [];
   const sessions = [];
-  for (const file of files) {
-    const isSubagent = file.includes(`${path.sep}subagents${path.sep}`);
-    const session = path.basename(file, '.jsonl');
-    let startedAt = null;
-    const lines = readline.createInterface({ input: fs.createReadStream(file), crlfDelay: Infinity });
-    for await (const line of lines) {
-      const wantsSkill = line.includes(SKILL_CALL);
-      const wantsSlash = line.includes(SLASH) && line.includes('"type":"user"');
-      if (startedAt !== null && !wantsSkill && !wantsSlash) continue;
-      let o;
-      try {
-        o = JSON.parse(line);
-      } catch {
+  const sources = [];
+  let files = 0;
+  for (const [id, root] of Object.entries(roots)) {
+    const stat = { id, files: 0, skipped: {} };
+    sources.push(stat);
+    if (!root || !fs.existsSync(root)) continue;
+    for (const entry of SOURCES[id].discover(root, since, { subagents: true })) {
+      stat.files++;
+      if (entry.compressed && !CAN_ZSTD) {
+        stat.skipped.compressed = (stat.skipped.compressed ?? 0) + 1;
         continue;
       }
-      const at = Date.parse(o.timestamp ?? '');
-      if (startedAt === null && Number.isFinite(at)) startedAt = at;
-      if (!Number.isFinite(at)) continue;
-      if (wantsSkill && o.type === 'assistant') {
-        for (const part of o.message?.content ?? []) {
-          if (part.type !== 'tool_use' || part.name !== 'Skill') continue;
-          const name = String(part.input?.skill ?? '');
-          if (names.has(name)) triggers.push({ name, at, session, via: 'tool' });
-        }
-      }
-      if (wantsSlash && o.type === 'user') {
-        const text = typeof o.message?.content === 'string' ? o.message.content : (o.message?.content ?? []).map(p => p.text ?? '').join('\n');
-        for (const m of text.matchAll(SLASH_RE)) {
-          const name = m[1].trim();
-          if (names.has(name)) triggers.push({ name, at, session, via: 'slash' });
-        }
-      }
+      const r = await SOURCES[id].scan(entry, names);
+      for (const t of r.triggers) triggers.push({ ...t, tool: id });
+      if (!r.subagent) sessions.push({ session: r.session, startedAt: r.startedAt, tool: id });
     }
-    if (!isSubagent) sessions.push({ session, startedAt: startedAt ?? fs.statSync(file).mtimeMs });
+    files += stat.files;
   }
-  return { files: files.length, triggers, sessions };
+  return { files, triggers, sessions, sources };
+}
+
+// Claude Code transcripts alone: the original entry point, kept for callers that pass one folder.
+function scanTriggers(root, names, since) {
+  return scanSources({ claude: root }, names, since);
 }
 
 function assess(skills, scan, opts) {
   const day = 86_400_000;
   return skills.map(s => {
-    const uses = scan.triggers.filter(t => t.name === s.name && t.at >= s.installedAt).sort((a, b) => a.at - b.at);
-    const sessionsSince = scan.sessions.filter(x => x.startedAt >= s.installedAt).length;
+    const loadedBy = SKILL_TARGETS[s.tool].loadedBy;
+    const uses = scan.triggers.filter(t => t.name === s.name && t.at >= s.installedAt && loadedBy.includes(t.tool ?? 'claude')).sort((a, b) => a.at - b.at);
+    const sessionsSince = scan.sessions.filter(x => x.startedAt >= s.installedAt && loadedBy.includes(x.tool ?? 'claude')).length;
     const ageDays = Math.floor((opts.now - s.installedAt) / day);
     let status;
     if (!s.present) status = 'missing';
@@ -163,6 +175,7 @@ function assess(skills, scan, opts) {
     else status = 'never';
     return {
       name: s.name,
+      tool: s.tool,
       description: s.description,
       source: s.source,
       runDate: s.runDate,
@@ -177,36 +190,40 @@ function assess(skills, scan, opts) {
   });
 }
 
+// `name` removes from the Claude folder; `agents:name` and `cursor:name` from the others.
 function remove(names, opts) {
   const stamp = new Date(opts.now).toISOString().slice(0, 10);
   const ledgerFile = path.join(opts.state, 'installed.json');
   const decisionsFile = path.join(opts.state, 'decisions.json');
-  const ledger = readJson(ledgerFile, { installed: [] });
-  const decisions = readJson(decisionsFile, { decisions: [] });
+  const ledger = T.readJson(ledgerFile, { installed: [] });
+  const decisions = T.readJson(decisionsFile, { decisions: [] });
   if (!Array.isArray(ledger.installed)) ledger.installed = [];
   if (!Array.isArray(decisions.decisions)) decisions.decisions = [];
   const at = new Date(opts.now).toISOString();
   const moved = [];
-  for (const name of names) {
-    if (!/^[\w.-]+$/.test(name)) {
-      moved.push({ name, status: 'skipped: not a skill folder name' });
+  for (const spec of names) {
+    const [, prefix, name] = /^(?:(\w+):)?(.*)$/.exec(spec);
+    const tool = prefix ?? 'claude';
+    if (!SKILL_TARGETS[tool] || !/^[\w.-]+$/.test(name)) {
+      moved.push({ name: spec, status: 'skipped: not a skill folder name' });
       continue;
     }
-    const src = path.join(opts.skills, name);
-    const entry = ledger.installed.find(e => e?.name === name && e.target === 'skill');
+    const src = path.join(opts.dirs[tool], name);
+    const entry = ledger.installed.find(e => e?.name === name && e.target === 'skill' && (e.tool ?? 'claude') === tool);
     if (!fs.existsSync(src)) {
       if (entry && !entry.prunedAt) entry.prunedAt = at;
-      moved.push({ name, status: 'already gone' });
+      moved.push({ name: spec, status: 'already gone' });
       continue;
     }
-    const dest = path.join(opts.state, 'pruned', stamp, name);
+    const dest = path.join(opts.state, 'pruned', stamp, tool === 'claude' ? name : `${tool}@${name}`);
     fs.mkdirSync(path.dirname(dest), { recursive: true });
     fs.cpSync(src, dest, { recursive: true });
     fs.rmSync(src, { recursive: true, force: true });
+    const which = tool === 'claude' ? {} : { tool };
     if (entry) entry.prunedAt = at;
-    else ledger.installed.push({ name, target: 'skill', path: src, runDate: null, installedAt: null, prunedAt: at });
-    decisions.decisions.push({ name, runDate: entry?.runDate ?? null, target: 'skill', decision: 'pruned', at });
-    moved.push({ name, status: 'moved', to: dest });
+    else ledger.installed.push({ name, target: 'skill', ...which, path: src, runDate: null, installedAt: null, prunedAt: at });
+    decisions.decisions.push({ name, runDate: entry?.runDate ?? null, target: 'skill', ...which, decision: 'pruned', at });
+    moved.push({ name: spec, status: 'moved', to: dest });
   }
   fs.mkdirSync(opts.state, { recursive: true });
   fs.writeFileSync(ledgerFile, JSON.stringify(ledger, null, 2));
@@ -214,30 +231,49 @@ function remove(names, opts) {
   return moved;
 }
 
+const TRIGGER_RULES = {
+  claude: 'Claude Code: a Skill tool call naming the skill, or a typed /<name>',
+  codex: 'Codex: a typed $<name>, or a command that reads <name>/SKILL.md or runs its scripts',
+  cursor: 'Cursor: a typed /<name>, or a tool call that reads <name>/SKILL.md',
+};
+
 function renderReport(r) {
   const label = { never: 'never triggered', 'too-new': 'too new to tell', used: 'in use', missing: 'folder gone' };
+  const folder = { claude: '~/.claude/skills', agents: '~/.agents/skills', cursor: '~/.cursor/skills' };
   const day = iso => (iso ? iso.slice(0, 10) : '—');
+  const sources = (r.window.sources ?? []).map(x => x.id);
+  const tools = new Set(r.skills.map(s => s.tool ?? 'claude'));
+  const handle = s => ((s.tool ?? 'claude') === 'claude' ? s.name : `${s.tool}:${s.name}`);
   const lines = [
     `# Generated skills: use since install`,
     ``,
     `${r.window.sessions} sessions from ${r.window.files} transcripts since ${day(r.window.since)}, generated ${r.generatedAt}.`,
-    `A trigger is a Skill tool call naming the skill or a typed /<name>. Grace: ${r.window.graceDays} days and ${r.window.graceSessions} sessions.`,
+    `A trigger is how each tool itself invokes a skill. ${(sources.length > 0 ? sources : ['claude']).map(id => TRIGGER_RULES[id]).join('; ')}. Grace: ${r.window.graceDays} days and ${r.window.graceSessions} sessions.`,
     ``,
   ];
+  if (sources.includes('cursor')) {
+    lines.push(`Cursor transcripts carry no timestamps, so Cursor sessions and triggers are dated by when the transcript file was last written.`, ``);
+  }
   if (r.skills.length === 0) {
     lines.push(`_No generated skills found: nothing in installed.json with target "skill", and no skill folder carries a PROVENANCE.md._`, ``);
     return lines.join('\n');
   }
-  lines.push(`| Skill | Installed | Sessions since | Triggered | Last triggered | Status |`, `|---|---|---|---|---|---|`);
+  const multi = tools.size > 1;
+  lines.push(
+    `| Skill | ${multi ? 'Folder | ' : ''}Installed | Sessions since | Triggered | Last triggered | Status |`,
+    `|---|${multi ? '---|' : ''}---|---|---|---|---|`,
+  );
   for (const s of r.skills) {
-    lines.push(`| \`${s.name}\` | ${day(s.installedAt)} (${s.ageDays} d) | ${s.sessionsSince} | ${s.triggered}× in ${s.triggerSessions} | ${day(s.lastTriggered)} | ${label[s.status]} |`);
+    lines.push(
+      `| \`${s.name}\` | ${multi ? `${folder[s.tool ?? 'claude']} | ` : ''}${day(s.installedAt)} (${s.ageDays} d) | ${s.sessionsSince} | ${s.triggered}× in ${s.triggerSessions} | ${day(s.lastTriggered)} | ${label[s.status]} |`,
+    );
   }
   const never = r.skills.filter(s => s.status === 'never');
   lines.push(``, `## Prune candidates (${never.length})`, ``);
   if (never.length === 0) lines.push(`_none_`);
-  for (const s of never) lines.push(`- \`${s.name}\`${s.description ? ` — ${s.description}` : ''}`);
+  for (const s of never) lines.push(`- \`${s.name}\`${multi ? ` (${folder[s.tool ?? 'claude']})` : ''}${s.description ? ` — ${s.description}` : ''}`);
   if (never.length > 0) {
-    lines.push(``, `Remove the ones the person picks with \`node prune.js --remove ${never.map(s => s.name).join(',')}\`; each folder moves to \`pruned/<date>/<name>/\` and can be moved back.`);
+    lines.push(``, `Remove the ones the person picks with \`node prune.js --remove ${never.map(handle).join(',')}\`; each folder moves to \`pruned/<date>/<name>/\` and can be moved back.`);
   }
   const young = r.skills.filter(s => s.status === 'too-new');
   if (young.length > 0) lines.push(``, `Too new to judge: ${young.map(s => `\`${s.name}\``).join(', ')}.`);
@@ -245,34 +281,10 @@ function renderReport(r) {
   return lines.join('\n');
 }
 
-function walk(dir) {
-  const out = [];
-  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-    const p = path.join(dir, e.name);
-    if (e.isDirectory()) out.push(...walk(p));
-    else if (e.isFile()) out.push(p);
-  }
-  return out;
-}
-
-function expandHome(p) {
-  return p.startsWith('~') ? path.join(os.homedir(), p.slice(1)) : p;
-}
-
-function parseArgs(argv) {
-  const out = {};
-  for (let i = 0; i < argv.length; i++) {
-    const m = /^--([\w-]+)(?:=(.*))?$/.exec(argv[i]);
-    if (!m) continue;
-    out[m[1]] = m[2] ?? (argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[++i] : 'true');
-  }
-  return out;
-}
-
-module.exports = { options, generatedSkills, scanTriggers, assess, remove, renderReport, parseArgs };
+module.exports = { options, generatedSkills, scanTriggers, scanSources, assess, remove, renderReport, parseArgs: T.parseArgs };
 
 if (require.main === module) {
-  main(parseArgs(process.argv.slice(2))).catch(e => {
+  main(T.parseArgs(process.argv.slice(2))).catch(e => {
     console.error(e);
     process.exit(1);
   });

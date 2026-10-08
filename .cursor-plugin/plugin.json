@@ -1,0 +1,13 @@
+{
+  "name": "skill-miner",
+  "description": "Mines your own Codex, Cursor and Claude Code transcripts for repeated workflows and corrections, proposes skills or rules, and installs only the ones you approve.",
+  "version": "0.5.0",
+  "author": {
+    "name": "Nick Zdanovych"
+  },
+  "homepage": "https://github.com/zdanovichnick/skill-miner",
+  "repository": "https://github.com/zdanovichnick/skill-miner",
+  "license": "MIT",
+  "keywords": ["skills", "memory", "transcripts", "personalization"],
+  "skills": ".agents/skills/"
+}

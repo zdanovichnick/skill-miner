@@ -1,15 +1,15 @@
 <p align="center">
-  <img src="assets/banner.svg" alt="skill-miner: turn how you actually use Claude Code into skills and memories" width="100%">
+  <img src="assets/banner.svg" alt="skill-miner: turn how you use Claude Code, Codex and Cursor into skills" width="100%">
 </p>
 
 <p align="center">
-  <a href="https://github.com/zdanovichnick/skill-miner/releases/tag/v0.4.0"><img alt="version" src="https://img.shields.io/badge/version-0.4.0-6366f1"></a>
+  <a href="https://github.com/zdanovichnick/skill-miner/releases/tag/v0.5.0"><img alt="version" src="https://img.shields.io/badge/version-0.5.0-6366f1"></a>
   <img alt="node" src="https://img.shields.io/badge/node-%E2%89%A5%2018-339933">
   <img alt="dependencies" src="https://img.shields.io/badge/dependencies-none-22c55e">
   <a href="LICENSE"><img alt="license" src="https://img.shields.io/github/license/zdanovichnick/skill-miner"></a>
 </p>
 
-**skill-miner** reads your own Claude Code transcripts, finds what you keep correcting and keep
+**skill-miner** reads your own Claude Code, Codex and Cursor transcripts, finds what you keep correcting and keep
 repeating, and proposes skills and memories for it. You review every proposal. Nothing is
 installed that you didn't pick.
 
@@ -26,16 +26,29 @@ then, without waiting for the next full mining run.
 
 ## Install
 
+**Claude Code**
+
 ```
 /plugin marketplace add zdanovichnick/skill-miner
 /plugin install skill-miner@skill-miner-marketplace
 ```
 
+**Codex and Cursor** need no plugin system, only Node ≥ 18:
+
+```
+git clone https://github.com/zdanovichnick/skill-miner
+node skill-miner/scripts/install.js self --target agents
+```
+
+That puts the miner and its scripts in `~/.agents/skills/skill-miner`, which both tools read. Then ask
+Codex for `$skill-miner` or Cursor for `/skill-miner`, and say what to do: mine, accept a proposal,
+or prune. (`--target cursor` or `--target claude` installs it elsewhere; `--replace` updates it.)
+
 ## Use
 
 | Command | What it does |
 |---|---|
-| `/skill-miner:mine [--days 30] [--min-sessions 3]` | Mines `~/.claude/projects/**/*.jsonl`, drafts up to 10 proposals under `~/.claude/skill-miner/proposals/<date>/`, asks which to keep |
+| `/skill-miner:mine [--days 30] [--min-sessions 3]` | Mines Claude Code, Codex and Cursor transcripts (`--source` picks which), drafts up to 10 proposals under `~/.claude/skill-miner/proposals/<date>/`, asks which to keep |
 | `/skill-miner:mine --live` | Skips the transcript scan and proposes rules for the live mod's repeats alone — the quick pass after a toast |
 | `/skill-miner:accept <name>...` | Installs kept proposals: skills into `~/.claude/skills/<name>/`, memories and CLAUDE.md lines into their target file |
 | `/corrections [clear]` | Lists the corrections the live mod noticed as you typed them, repeats first; `clear` forgets them |
@@ -64,6 +77,65 @@ then, without waiting for the next full mining run.
 - **Prompt openings, slash-command use**, and up to 80 recent long instructions that the
   command clusters by intent.
 
+### Codex and Cursor
+
+The same miner reads Codex and Cursor transcripts, and the skills it drafts use the portable
+[Agent Skills](https://agentskills.io) format (`SKILL.md` with only `name` and `description`), so
+one proposal installs into whichever tool will load it.
+
+<p align="center">
+  <img src="assets/multi-tool.svg" alt="Claude Code, Codex and Cursor transcripts go through one miner; accepted skills land in each tool's skills folder" width="100%">
+</p>
+
+| | Claude Code | Codex | Cursor |
+|---|---|---|---|
+| Transcripts | `~/.claude/projects/**/*.jsonl` | `sessions/` and `archived_sessions/` under `$CODEX_HOME` or `~/.codex` | `~/.cursor/projects/<project>/agent-transcripts/<id>/<id>.jsonl` |
+| What counts as typed | user messages | `user_message` events; injected user-role context does not | the text inside `<user_query>`; attached-context blocks do not |
+| Left out | sub-agents, task notifications | sub-agent and scripted (`exec`) runs | blocks without `<user_query>` |
+| Timestamps | yes | yes | no, so sessions are dated by file modification time |
+| Tool calls | names and inputs | shell, patches, MCP | names and inputs, no output |
+| Skills folder | `~/.claude/skills` | `~/.agents/skills` | `~/.agents/skills`, `~/.cursor/skills`, and it reads `~/.claude/skills` too |
+| Run it | `/skill-miner:mine` | `$skill-miner` | `/skill-miner` |
+| Live | hooks module, toast, `/corrections` | `UserPromptSubmit` hook, one-line notice | `beforeSubmitPrompt` hook, recorded without a notice |
+
+`--source auto` (the default) reads every tool whose transcript folder exists; `--source codex`
+or `--source claude,cursor` picks. With more than one tool read, each candidate says which tools'
+sessions it came from. `/skill-miner:accept --target agents` and `/skill-miner:prune --targets all`
+reach the Codex and Cursor folders from Claude Code. `prune` judges a skill only by transcripts of
+the tools that load its folder.
+
+**Live hooks for Codex and Cursor** record corrections the way the Claude mod does, into
+`~/.claude/skill-miner/live/corrections.<tool>.json`, and write `repeats.<tool>.json` on the second
+identical one. `mine.js` merges those with the Claude mod's `repeats.json`. They never block or
+change a prompt, and any failure ends in `{"continue": true}`.
+
+```
+node scripts/install.js hooks --tool cursor            # shows what ~/.cursor/hooks.json would become
+node scripts/install.js hooks --tool cursor --apply    # writes it, keeping a .skill-miner.bak copy
+node scripts/install.js hooks --tool codex  --apply    # the same for ~/.codex/hooks.json
+node scripts/live-hook.js --clear                      # forgets what the hooks recorded
+```
+
+**Limits.** Read these before relying on it.
+
+- **Not tried on real installs.** Neither Codex nor Cursor was installed where this was built. The
+  readers, the hooks and the manifests follow the tools' documentation, and the tests use fixtures
+  written from it, not captured sessions. If a reader finds nothing, `mine.js` prints what it
+  skipped and why. Reports of a format that does not match are the most useful feedback.
+- **Cursor's hook cannot show a notice** on a prompt that goes through, so Cursor repeats are
+  recorded and appear in the next `mine` run (or `mine --live`), with no toast. Whether Codex
+  displays the `systemMessage` the hook returns is also unconfirmed.
+- **Codex runs a new hook only after you trust it**: open `/hooks` in Codex once after installing.
+- **Codex rollouts compressed to `.zst`** are read only on Node 22.15 or later; older Node skips
+  them and says how many.
+- **Hooks see no interrupts**, so the "typed right after interrupting a turn" signal is a Claude
+  Code feature; Codex and Cursor hooks match on wording alone.
+- **Cursor's user rules have no file**, so a rule proposed for them is printed for you to paste
+  into Customize, Rules. Codex reads `~/.codex/AGENTS.override.md` before `AGENTS.md`; the skill
+  checks for it before writing.
+- `.cursor-plugin/plugin.json` points Cursor at the bundled skill. It is untested; the supported
+  route is `install.js self` above.
+
 ### Live mode
 
 `hooks/register.ts` is a Claude Code hooks module that runs in every session once the plugin is
@@ -88,7 +160,9 @@ or subagent turns, and it never changes or drops the prompt: every hook calls `n
 Every generated skill costs context on every turn, used or not. `scripts/prune.js` reads
 `installed.json` (and any skill folder carrying the `PROVENANCE.md` that `accept` leaves beside
 it), then counts, in the transcripts since each install, the `Skill` tool calls naming it and the
-times you typed `/<name>`. Nothing else in a transcript is read.
+times you typed `/<name>` (in Codex, `$<name>` or a command that opens its `SKILL.md`; in Cursor,
+`/<name>` or a read of it). Nothing else in a transcript is read. `--targets all` checks the Codex
+and Cursor folders as well as `~/.claude/skills`.
 
 <p align="center">
   <img src="assets/prune.svg" alt="Prune: generated skills listed with sessions since install and triggers; one never triggered is offered for removal" width="100%">
@@ -121,9 +195,10 @@ gives it exactly one destination.
 
 Only prompts you typed are mined. Tool output, subagent transcripts, pasted blocks, system
 reminders, harness context and peer-session messages are all stripped before anything is
-counted. Instructions planted in those would otherwise become standing skills. Proposals
+counted; so are the context Codex injects as user-role messages and the attached-context blocks
+Cursor wraps around a prompt. Instructions planted in those would otherwise become standing skills. Proposals
 restate your rules without URLs, hosts, accounts or secrets, and nothing reaches
-`~/.claude/skills` without your pick.
+skills folder without your pick.
 
 ## State
 
@@ -133,14 +208,18 @@ restate your rules without URLs, hosts, accounts or secrets, and nothing reaches
 | `~/.claude/skill-miner/proposals/<date>/` | Drafts plus `PROVENANCE.md` and `INDEX.md` |
 | `~/.claude/skill-miner/decisions.json` | Kept/dropped/installed per proposal; dropped ones are not proposed again |
 | `~/.claude/skill-miner/installed.json` | What was installed where, with `prunedAt` once pruned; `accept` points at `prune` past 8 generated skills |
-| `~/.claude/skill-miner/pruned/<date>/<name>/` | Skills `prune` moved out of `~/.claude/skills`; move one back to undo |
+| `~/.claude/skill-miner/pruned/<date>/<name>/` | Skills `prune` moved out of their skills folder (`<tool>@<name>` for the Codex and Cursor ones); move one back to undo |
 | `~/.claude/skill-miner/runs/<date>/prune.md` | The use-since-install table `prune` reports from |
 | plugin store, key `corrections` | What the live mod noticed: text (≤ 300 chars), why, project folder name, session id, time |
 | `~/.claude/skill-miner/live/repeats.json` | Corrections typed 2+ times, grouped, with up to three quotes each; written by the mod, read by `mine.js` |
-| `~/.claude/skill-miner/live/handled.json` | Repeat keys already kept or dropped; written by `/skill-miner:mine`, read by the mod |
+| `~/.claude/skill-miner/live/corrections.<tool>.json`, `repeats.<tool>.json` | The same for the Codex and Cursor hooks (`<tool>` is `codex` or `cursor`); `mine.js` merges every `repeats*.json` |
+| `~/.claude/skill-miner/live/handled.json` | Repeat keys already kept or dropped; written by `/skill-miner:mine`, read by the mod and the hooks |
+| `~/.claude/skill-miner/replaced/<date>/` | A skill folder `install.js --replace` moved aside |
 
 ## Roadmap
 
+- [x] Codex and Cursor: mine their transcripts, install into their skills folders, a portable skill,
+      live hooks (v0.5.0; built from their documentation, not yet run against real installs)
 - [x] Prune generated skills that never trigger (`/skill-miner:prune`, v0.4.0)
 - [x] A live mod that notices corrections as they happen (`/corrections`, v0.2.0)
 - [x] Feed the live mod's repeats into `/skill-miner:mine` as candidates, so a rule can be

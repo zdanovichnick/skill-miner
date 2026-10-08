@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-labelledby="t d">
+  <title id="t">skill-miner across Claude Code, Codex and Cursor</title>
+  <desc id="d">Transcripts from Claude Code, Codex and Cursor are read by the same miner; you pick proposals, and each is installed into the skills folder of the tool that will load it.</desc>
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+  <rect width="1200" height="420" rx="20" fill="#0f172a"/>
+  <g font-family="'Segoe UI', Helvetica, Arial, sans-serif">
+    <text x="600" y="46" text-anchor="middle" font-size="26" font-weight="700" fill="#f8fafc">One miner, three tools</text>
+
+    <!-- sources -->
+    <rect x="30" y="90" width="270" height="76" rx="14" fill="#1e293b" stroke="#475569" stroke-width="2"/>
+    <text x="165" y="123" text-anchor="middle" font-size="19" font-weight="700" fill="#f1f5f9">Claude Code</text>
+    <text x="165" y="148" text-anchor="middle" font-size="13" fill="#94a3b8">~/.claude/projects</text>
+
+    <rect x="30" y="186" width="270" height="76" rx="14" fill="#1e293b" stroke="#475569" stroke-width="2"/>
+    <text x="165" y="219" text-anchor="middle" font-size="19" font-weight="700" fill="#f1f5f9">Codex</text>
+    <text x="165" y="244" text-anchor="middle" font-size="13" fill="#94a3b8">~/.codex/sessions</text>
+
+    <rect x="30" y="282" width="270" height="76" rx="14" fill="#1e293b" stroke="#475569" stroke-width="2"/>
+    <text x="165" y="315" text-anchor="middle" font-size="19" font-weight="700" fill="#f1f5f9">Cursor</text>
+    <text x="165" y="340" text-anchor="middle" font-size="13" fill="#94a3b8">~/.cursor/projects/…/agent-transcripts</text>
+
+    <path d="M300 128 L370 205" stroke="#94a3b8" stroke-width="3" fill="none" marker-end="url(#arr)"/>
+    <path d="M300 224 L370 224" stroke="#94a3b8" stroke-width="3" fill="none" marker-end="url(#arr)"/>
+    <path d="M300 320 L370 243" stroke="#94a3b8" stroke-width="3" fill="none" marker-end="url(#arr)"/>
+
+    <!-- miner -->
+    <rect x="380" y="120" width="440" height="208" rx="16" fill="#1e1b4b" stroke="#6366f1" stroke-width="2.5"/>
+    <text x="600" y="162" text-anchor="middle" font-size="22" font-weight="700" fill="#e0e7ff">skill-miner</text>
+    <text x="600" y="196" text-anchor="middle" font-size="15" fill="#c7d2fe">1  read typed prompts and tool-call shapes only</text>
+    <text x="600" y="224" text-anchor="middle" font-size="15" fill="#c7d2fe">2  group corrections, repeats and recipes across tools</text>
+    <text x="600" y="252" text-anchor="middle" font-size="15" fill="#c7d2fe">3  draft proposals; you pick which to keep</text>
+    <text x="600" y="296" text-anchor="middle" font-size="13" fill="#a5b4fc">Sub-agent, scripted and injected-context sessions never count</text>
+
+    <path d="M820 205 L890 128" stroke="#94a3b8" stroke-width="3" fill="none" marker-end="url(#arr)"/>
+    <path d="M820 224 L890 224" stroke="#94a3b8" stroke-width="3" fill="none" marker-end="url(#arr)"/>
+    <path d="M820 243 L890 320" stroke="#94a3b8" stroke-width="3" fill="none" marker-end="url(#arr)"/>
+
+    <!-- targets -->
+    <rect x="900" y="90" width="270" height="76" rx="14" fill="#14532d" stroke="#22c55e" stroke-width="2"/>
+    <text x="1035" y="123" text-anchor="middle" font-size="17" font-weight="700" fill="#dcfce7">~/.claude/skills</text>
+    <text x="1035" y="148" text-anchor="middle" font-size="13" fill="#86efac">read by Claude Code and Cursor</text>
+
+    <rect x="900" y="186" width="270" height="76" rx="14" fill="#14532d" stroke="#22c55e" stroke-width="2"/>
+    <text x="1035" y="219" text-anchor="middle" font-size="17" font-weight="700" fill="#dcfce7">~/.agents/skills</text>
+    <text x="1035" y="244" text-anchor="middle" font-size="13" fill="#86efac">read by Codex and Cursor</text>
+
+    <rect x="900" y="282" width="270" height="76" rx="14" fill="#14532d" stroke="#22c55e" stroke-width="2"/>
+    <text x="1035" y="315" text-anchor="middle" font-size="17" font-weight="700" fill="#dcfce7">~/.cursor/skills</text>
+    <text x="1035" y="340" text-anchor="middle" font-size="13" fill="#86efac">read by Cursor</text>
+
+    <text x="600" y="396" text-anchor="middle" font-size="13" fill="#64748b">Illustration. Folder names are the tools' documented skill locations.</text>
+  </g>
+</svg>

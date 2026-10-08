@@ -26,7 +26,7 @@
   </g>
 
   <text x="230" y="150" font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="68" font-weight="700" fill="#f8fafc">skill-miner</text>
-  <text x="232" y="196" font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="26" fill="#cbd5e1">Turn how you actually use Claude Code into skills and memories.</text>
+  <text x="232" y="196" font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="26" fill="#cbd5e1">Turn how you use Claude Code, Codex and Cursor into skills.</text>
   <text x="232" y="232" font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" fill="#94a3b8">Mines your own transcripts offline. Installs only what you approve.</text>
 
   <g font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="600">
@@ -37,6 +37,6 @@
     <rect x="538" y="258" width="170" height="32" rx="16" fill="#14532d"/>
     <text x="623" y="279" text-anchor="middle" fill="#bbf7d0">runs locally</text>
     <rect x="720" y="258" width="104" height="32" rx="16" fill="#713f12"/>
-    <text x="772" y="279" text-anchor="middle" fill="#fde68a">v0.1.0</text>
+    <text x="772" y="279" text-anchor="middle" fill="#fde68a">v0.5.0</text>
   </g>
 </svg>
