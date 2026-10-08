@@ -29,18 +29,18 @@
       <rect width="530" height="96" rx="10" fill="#1e293b" stroke="#6366f1" stroke-width="2"/>
       <text x="16" y="26" font-size="13" fill="#a5b4fc">skill-miner</text>
       <text x="16" y="52" font-size="15" fill="#e2e8f0">You have corrected this 2 times.</text>
-      <text x="16" y="74" font-size="14" fill="#94a3b8">/corrections lists it;</text>
-      <text x="16" y="90" font-size="14" fill="#94a3b8">/skill-miner:mine can make it a rule.</text>
+      <text x="16" y="74" font-size="14" fill="#94a3b8">/skill-miner:mine --live</text>
+      <text x="16" y="90" font-size="14" fill="#94a3b8">proposes a rule now.</text>
     </g>
 
     <!-- command -->
     <text x="30" y="336" fill="#a5b4fc">&gt; /corrections</text>
     <text x="30" y="366" fill="#e2e8f0">2 corrections noticed, 1 distinct.</text>
-    <text x="30" y="396" fill="#94a3b8">Repeated:</text>
+    <text x="30" y="396" fill="#94a3b8">Repeated, not yet a rule:</text>
     <text y="422" fill="#4ade80"><tspan x="30">2×</tspan><tspan x="80">don't use npm here, this repo is pnpm</tspan></text>
     <text x="30" y="456" fill="#94a3b8">Recent (2 of 2):</text>
     <text y="482" fill="#cbd5e1"><tspan x="30">[just now]</tspan><tspan x="170">shop-web</tspan><tspan x="350">· opening:</tspan><tspan x="470">Don't use npm here!</tspan></text>
     <text y="508" fill="#cbd5e1"><tspan x="30">[2 d ago]</tspan><tspan x="170">design-kit</tspan><tspan x="350">· opening:</tspan><tspan x="470">don't use npm here, this repo is pnpm</tspan></text>
-    <text x="30" y="542" fill="#64748b">Run /skill-miner:mine to turn repeats into proposals; /corrections clear forgets this list.</text>
+    <text x="30" y="542" fill="#64748b">Run /skill-miner:mine --live to propose rules for the repeats; /corrections clear forgets this list.</text>
   </g>
 </svg>

@@ -9,7 +9,7 @@
       "name": "skill-miner",
       "source": "./",
       "description": "Mines your own Claude Code transcripts for repeated workflows and corrections, proposes skills or memories, and installs only the ones you approve.",
-      "version": "0.2.0"
+      "version": "0.3.0"
     }
   ]
 }

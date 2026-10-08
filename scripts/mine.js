@@ -7,6 +7,11 @@
 // future session.
 //
 // Usage: node mine.js [--days 30] [--root ~/.claude/projects] [--out <dir>] [--min-sessions 3]
+//                     [--live] [--live-dir ~/.claude/skill-miner/live]
+//
+// The live mod (hooks/register.ts) writes <live-dir>/repeats.json: corrections the person typed
+// more than once, already grouped. They join the report as its first section; --live skips the
+// transcript scan and reports them alone, for a run right after the mod's toast.
 
 'use strict';
 const fs = require('fs');
@@ -19,6 +24,8 @@ const DAYS = Number(args.days ?? 30);
 const MIN_SESSIONS = Number(args['min-sessions'] ?? 3);
 const ROOT = expandHome(args.root ?? '~/.claude/projects');
 const OUT = expandHome(args.out ?? path.join('~/.claude/skill-miner/runs', new Date().toISOString().slice(0, 10)));
+const LIVE_DIR = expandHome(args['live-dir'] ?? '~/.claude/skill-miner/live');
+const LIVE_ONLY = args.live === 'true';
 
 const ACTION = /^(Bash|PowerShell|Edit|Write|MultiEdit|NotebookEdit|Skill|Agent|Workflow|mcp):?/;
 const KEPT_BASENAMES = /^(CLAUDE\.md|AGENTS\.md|README\.md|CHANGELOG\.md|SKILL\.md|Program\.cs|package\.json|pyproject\.toml|Makefile|Dockerfile|docker-compose\.ya?ml|pipeline\.ya?ml|hooks\.json|plugin\.json|settings(\.local)?\.json|appsettings(\.\w+)?\.json)$/i;
@@ -47,7 +54,9 @@ main().catch(e => {
 
 async function main() {
   const since = Date.now() - DAYS * 86_400_000;
-  const files = walk(ROOT).filter(f => f.endsWith('.jsonl') && !f.includes(`${path.sep}subagents${path.sep}`) && fs.statSync(f).mtimeMs >= since);
+  const files = LIVE_ONLY
+    ? []
+    : walk(ROOT).filter(f => f.endsWith('.jsonl') && !f.includes(`${path.sep}subagents${path.sep}`) && fs.statSync(f).mtimeMs >= since);
 
   const sessions = [];
   for (const file of files) {
@@ -57,7 +66,8 @@ async function main() {
 
   const result = {
     generatedAt: new Date().toISOString(),
-    window: { days: DAYS, files: files.length, sessions: sessions.length, minSessions: MIN_SESSIONS },
+    window: { days: DAYS, files: files.length, sessions: sessions.length, minSessions: MIN_SESSIONS, liveOnly: LIVE_ONLY },
+    liveRepeats: readLiveRepeats(),
     toolSequences: mineSequences(sessions),
     shellRecipes: mineShell(sessions),
     promptOpenings: minePrompts(sessions),
@@ -72,9 +82,36 @@ async function main() {
   fs.writeFileSync(path.join(OUT, 'report.md'), renderReport(result));
   console.log(`[skill-miner] ${sessions.length} sessions from ${files.length} files (${DAYS}d) -> ${OUT}`);
   console.log(
-    `[skill-miner] sequences ${result.toolSequences.length}, shell ${result.shellRecipes.length}, openings ${result.promptOpenings.length}, ` +
-      `repeated ${result.repeatedInstructions.length}, corrections ${result.corrections.length}`,
+    `[skill-miner] live repeats ${result.liveRepeats.length}, sequences ${result.toolSequences.length}, shell ${result.shellRecipes.length}, ` +
+      `openings ${result.promptOpenings.length}, repeated ${result.repeatedInstructions.length}, corrections ${result.corrections.length}`,
   );
+}
+
+// What the live mod grouped already: each entry a correction typed 2+ times, with up to three
+// quotes of the person's words. Absent or unreadable, there are none.
+function readLiveRepeats() {
+  const file = path.join(LIVE_DIR, 'repeats.json');
+  if (!fs.existsSync(file)) return [];
+  let parsed;
+  try {
+    parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    return [];
+  }
+  const day = ms => (Number.isFinite(ms) ? new Date(ms).toISOString().slice(0, 10) : '');
+  return (Array.isArray(parsed?.repeats) ? parsed.repeats : [])
+    .filter(r => typeof r?.key === 'string' && Array.isArray(r.quotes))
+    .map(r => ({
+      key: r.key,
+      count: Number(r.count) || r.quotes.length,
+      sessions: Number(r.sessions) || 1,
+      projects: Array.isArray(r.projects) ? r.projects.length : 1,
+      projectNames: Array.isArray(r.projects) ? r.projects.slice(0, 6) : [],
+      firstSeen: day(r.firstSeen),
+      lastSeen: day(r.lastSeen),
+      quotes: r.quotes.filter(q => typeof q === 'string').slice(0, 3).map(q => q.slice(0, 300)),
+    }))
+    .sort((a, b) => b.count - a.count);
 }
 
 async function parseSession(file) {
@@ -339,11 +376,23 @@ function renderReport(r) {
   const lines = [
     `# Work-pattern candidates`,
     ``,
-    `${r.window.sessions} sessions, last ${r.window.days} days, generated ${r.generatedAt}. Threshold: ${r.window.minSessions}+ sessions.`,
+    r.window.liveOnly
+      ? `Live run: transcripts not scanned, generated ${r.generatedAt}.`
+      : `${r.window.sessions} sessions, last ${r.window.days} days, generated ${r.generatedAt}. Threshold: ${r.window.minSessions}+ sessions.`,
     ``,
     `Evidence is limited to typed prompts and tool-call shapes; tool output never enters a candidate.`,
     ``,
+    `## Live repeats (${r.liveRepeats.length})`,
+    ``,
+    `Corrections typed more than once, grouped by the live mod as they happened. A repeat is a candidate on its own, whatever the session threshold; its key goes to live/handled.json once decided.`,
+    ``,
   ];
+  if (r.liveRepeats.length === 0) lines.push(`_none_`, ``);
+  for (const l of r.liveRepeats) {
+    lines.push(`- **${l.count}×** in ${l.sessions} session(s), ${l.projectNames.join(', ')} (${l.firstSeen} → ${l.lastSeen}) — key \`${cell(l.key)}\``);
+    for (const q of l.quotes) lines.push(`  - "${cell(q)}"`);
+  }
+  lines.push(``);
   const table = (title, rows, cols) => {
     lines.push(`## ${title} (${rows.length})`, ``);
     if (rows.length === 0) return lines.push(`_none_`, ``);

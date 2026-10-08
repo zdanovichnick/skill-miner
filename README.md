@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/zdanovichnick/skill-miner/releases/tag/v0.2.0"><img alt="version" src="https://img.shields.io/badge/version-0.2.0-6366f1"></a>
+  <a href="https://github.com/zdanovichnick/skill-miner/releases/tag/v0.3.0"><img alt="version" src="https://img.shields.io/badge/version-0.3.0-6366f1"></a>
   <img alt="node" src="https://img.shields.io/badge/node-%E2%89%A5%2018-339933">
   <img alt="dependencies" src="https://img.shields.io/badge/dependencies-none-22c55e">
   <a href="LICENSE"><img alt="license" src="https://img.shields.io/github/license/zdanovichnick/skill-miner"></a>
@@ -15,7 +15,8 @@ installed that you didn't pick.
 
 It also runs **live**: a hooks module watches what you type, counts corrections on the status
 line, and raises a toast the second time you correct the same thing, in any project, on any day.
-`/corrections` shows the list; `/skill-miner:mine` turns repeats into proposals.
+`/corrections` shows the list; `/skill-miner:mine --live` proposes a rule for the repeats right
+then, without waiting for the next full mining run.
 
 <p align="center">
   <img src="assets/live-mode.svg" alt="Live mode: a typed correction is counted, a repeat raises a toast, /corrections lists repeats first" width="100%">
@@ -35,6 +36,7 @@ line, and raises a toast the second time you correct the same thing, in any proj
 | Command | What it does |
 |---|---|
 | `/skill-miner:mine [--days 30] [--min-sessions 3]` | Mines `~/.claude/projects/**/*.jsonl`, drafts up to 10 proposals under `~/.claude/skill-miner/proposals/<date>/`, asks which to keep |
+| `/skill-miner:mine --live` | Skips the transcript scan and proposes rules for the live mod's repeats alone — the quick pass after a toast |
 | `/skill-miner:accept <name>...` | Installs kept proposals: skills into `~/.claude/skills/<name>/`, memories and CLAUDE.md lines into their target file |
 | `/corrections [clear]` | Lists the corrections the live mod noticed as you typed them, repeats first; `clear` forgets them |
 
@@ -70,7 +72,11 @@ plugin's own store (local, capped at 500 entries, ≤ 300 characters each):
 
 - The status line under the prompt counts corrections noticed this session.
 - When the same correction (case and punctuation folded) shows up a second time, in this or an
-  earlier session, a toast says so and points at `/corrections` and `/skill-miner:mine`.
+  earlier session, the mod writes the grouped repeats to `~/.claude/skill-miner/live/repeats.json`
+  and a toast points at `/skill-miner:mine --live`, which reads that file and proposes a rule
+  without scanning transcripts. A full run reads it too, as the report's first section.
+- Once a repeat has been kept or dropped, the command records its key in `live/handled.json`;
+  the mod stops toasting for it and leaves it out of the next `repeats.json`.
 - `/corrections` lists repeats first, then the most recent entries; `/corrections clear` forgets them.
 
 It records nothing from slash commands, pasted logs, task notifications, peer-session messages
@@ -106,13 +112,15 @@ restate your rules without URLs, hosts, accounts or secrets, and nothing reaches
 | `~/.claude/skill-miner/decisions.json` | Kept/dropped/installed per proposal; dropped ones are not proposed again |
 | `~/.claude/skill-miner/installed.json` | What was installed where; `accept` warns past 8 generated skills |
 | plugin store, key `corrections` | What the live mod noticed: text (≤ 300 chars), why, project folder name, session id, time |
+| `~/.claude/skill-miner/live/repeats.json` | Corrections typed 2+ times, grouped, with up to three quotes each; written by the mod, read by `mine.js` |
+| `~/.claude/skill-miner/live/handled.json` | Repeat keys already kept or dropped; written by `/skill-miner:mine`, read by the mod |
 
 ## Roadmap
 
 - [ ] Prune generated skills that never trigger
 - [x] A live mod that notices corrections as they happen (`/corrections`, v0.2.0)
-- [ ] Feed the live mod's repeats into `/skill-miner:mine` as candidates, so a rule can be
-      proposed the moment it repeats rather than on the next mining run
+- [x] Feed the live mod's repeats into `/skill-miner:mine` as candidates, so a rule can be
+      proposed the moment it repeats rather than on the next mining run (`--live`, v0.3.0)
 
 ## License
 
