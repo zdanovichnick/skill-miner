@@ -13,6 +13,16 @@
 repeating, and proposes skills and memories for it. You review every proposal. Nothing is
 installed that you didn't pick.
 
+It also runs **live**: a hooks module watches what you type, counts corrections on the status
+line, and raises a toast the second time you correct the same thing, in any project, on any day.
+`/corrections` shows the list; `/skill-miner:mine` turns repeats into proposals.
+
+<p align="center">
+  <img src="assets/live-mode.svg" alt="Live mode: a typed correction is counted, a repeat raises a toast, /corrections lists repeats first" width="100%">
+</p>
+
+> Illustration. Names and numbers are made up.
+
 ## Install
 
 ```

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="560" viewBox="0 0 1200 560" role="img" aria-labelledby="t d">
+  <title id="t">Live mode</title>
+  <desc id="d">Illustrative terminal session: a typed correction is counted on the status line, a repeat across sessions raises a toast, and /corrections lists repeats first. Names and numbers are made up.</desc>
+  <rect width="1200" height="560" rx="16" fill="#0b1020"/>
+  <rect width="1200" height="44" rx="16" fill="#1e293b"/>
+  <rect y="28" width="1200" height="16" fill="#1e293b"/>
+  <circle cx="30" cy="22" r="7" fill="#ef4444"/><circle cx="54" cy="22" r="7" fill="#f59e0b"/><circle cx="78" cy="22" r="7" fill="#22c55e"/>
+  <text x="600" y="28" text-anchor="middle" font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" fill="#94a3b8">claude — live mode, illustrative example</text>
+
+  <g font-family="Consolas, 'Cascadia Mono', Menlo, 'DejaVu Sans Mono', monospace" font-size="17">
+    <!-- session one -->
+    <text x="30" y="80" font-size="13" fill="#475569">Tuesday</text>
+    <text x="30" y="108" fill="#a5b4fc">&gt; don't use npm here, this repo is pnpm</text>
+    <text x="30" y="134" fill="#64748b">● Switching the install step to pnpm…</text>
+    <rect x="30" y="150" width="440" height="28" rx="6" fill="#111a33"/>
+    <text x="42" y="169" font-size="15" fill="#818cf8">skill-miner · 1 correction noticed this session</text>
+
+    <!-- divider -->
+    <line x1="30" y1="204" x2="1170" y2="204" stroke="#1e293b" stroke-width="2" stroke-dasharray="6 6"/>
+
+    <!-- session two -->
+    <text x="30" y="232" font-size="13" fill="#475569">Thursday, another project</text>
+    <text x="30" y="260" fill="#a5b4fc">&gt; Don't use npm here!</text>
+    <text x="30" y="286" fill="#64748b">● Using pnpm…</text>
+
+    <!-- toast -->
+    <g transform="translate(640 222)">
+      <rect width="530" height="96" rx="10" fill="#1e293b" stroke="#6366f1" stroke-width="2"/>
+      <text x="16" y="26" font-size="13" fill="#a5b4fc">skill-miner</text>
+      <text x="16" y="52" font-size="15" fill="#e2e8f0">You have corrected this 2 times.</text>
+      <text x="16" y="74" font-size="14" fill="#94a3b8">/corrections lists it;</text>
+      <text x="16" y="90" font-size="14" fill="#94a3b8">/skill-miner:mine can make it a rule.</text>
+    </g>
+
+    <!-- command -->
+    <text x="30" y="336" fill="#a5b4fc">&gt; /corrections</text>
+    <text x="30" y="366" fill="#e2e8f0">2 corrections noticed, 1 distinct.</text>
+    <text x="30" y="396" fill="#94a3b8">Repeated:</text>
+    <text y="422" fill="#4ade80"><tspan x="30">2×</tspan><tspan x="80">don't use npm here, this repo is pnpm</tspan></text>
+    <text x="30" y="456" fill="#94a3b8">Recent (2 of 2):</text>
+    <text y="482" fill="#cbd5e1"><tspan x="30">[just now]</tspan><tspan x="170">snap-ui</tspan><tspan x="350">· opening:</tspan><tspan x="470">Don't use npm here!</tspan></text>
+    <text y="508" fill="#cbd5e1"><tspan x="30">[2 d ago]</tspan><tspan x="170">platform-ui-lib</tspan><tspan x="350">· opening:</tspan><tspan x="470">don't use npm here, this repo is pnpm</tspan></text>
+    <text x="30" y="542" fill="#64748b">Run /skill-miner:mine to turn repeats into proposals; /corrections clear forgets this list.</text>
+  </g>
+</svg>
