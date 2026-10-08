@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="540" viewBox="0 0 1200 540" role="img" aria-labelledby="t d">
+  <title id="t">Example session</title>
+  <desc id="d">Illustrative terminal session: running /skill-miner:mine, choosing proposals, then /skill-miner:accept installing them. Names and numbers are made up.</desc>
+  <rect width="1200" height="540" rx="16" fill="#0b1020"/>
+  <rect width="1200" height="44" rx="16" fill="#1e293b"/>
+  <rect y="28" width="1200" height="16" fill="#1e293b"/>
+  <circle cx="30" cy="22" r="7" fill="#ef4444"/><circle cx="54" cy="22" r="7" fill="#f59e0b"/><circle cx="78" cy="22" r="7" fill="#22c55e"/>
+  <text x="600" y="28" text-anchor="middle" font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" fill="#94a3b8">claude — illustrative example, names and numbers are made up</text>
+
+  <g font-family="Consolas, 'Cascadia Mono', Menlo, 'DejaVu Sans Mono', monospace" font-size="17">
+    <text x="30" y="84" fill="#a5b4fc">&gt; /skill-miner:mine --days 30</text>
+    <text x="30" y="116" fill="#64748b">mined 41 sessions across 6 projects</text>
+    <text x="30" y="140" fill="#64748b">7 proposals drafted → ~/.claude/skill-miner/proposals/2026-10-08/</text>
+    <text x="30" y="184" fill="#e2e8f0">Which proposals do you want to keep?</text>
+    <text y="214" fill="#4ade80"><tspan x="30">[x] release-checklist</tspan><tspan x="330">skill</tspan><tspan x="470">seen in 5 sessions</tspan></text>
+    <text y="240" fill="#4ade80"><tspan x="30">[x] prefer-pnpm</tspan><tspan x="330">claude-md</tspan><tspan x="470">restated in 3 projects</tspan></text>
+    <text y="266" fill="#94a3b8"><tspan x="30">[ ] api-config-source</tspan><tspan x="330">memory</tspan><tspan x="470">seen in 2 sessions</tspan></text>
+    <text y="292" fill="#4ade80"><tspan x="30">[x] ignore-bot-plugin</tspan><tspan x="330">conflict</tspan><tspan x="470">corrected 4 times</tspan></text>
+    <text x="30" y="336" fill="#64748b">kept 3 of 7</text>
+    <text x="30" y="382" fill="#a5b4fc">&gt; /skill-miner:accept release-checklist prefer-pnpm ignore-bot-plugin</text>
+    <text y="414" fill="#4ade80"><tspan x="30">✓ skill</tspan><tspan x="170">~/.claude/skills/release-checklist/SKILL.md</tspan></text>
+    <text y="440" fill="#4ade80"><tspan x="30">✓ claude-md</tspan><tspan x="170">~/.claude/CLAUDE.md</tspan></text>
+    <text y="466" fill="#4ade80"><tspan x="30">✓ conflict</tspan><tspan x="170">~/.claude/CLAUDE.md</tspan></text>
+    <text x="30" y="502" fill="#64748b">new skills load in the next session, or after /reload-plugins</text>
+  </g>
+</svg>

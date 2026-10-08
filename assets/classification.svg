@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="470" viewBox="0 0 1200 470" role="img" aria-labelledby="t d">
+  <title id="t">Where each candidate ends up</title>
+  <desc id="d">Each candidate is classified as exactly one of: skill, memory, CLAUDE.md line, conflict, or drop.</desc>
+  <rect width="1200" height="470" rx="20" fill="#0f172a"/>
+  <g font-family="'Segoe UI', Helvetica, Arial, sans-serif">
+    <text x="600" y="48" text-anchor="middle" font-size="26" font-weight="700" fill="#f8fafc">Every candidate gets exactly one destination</text>
+
+    <rect x="40" y="100" width="170" height="300" rx="14" fill="#1e293b" stroke="#475569" stroke-width="2"/>
+    <text x="125" y="230" text-anchor="middle" font-size="20" font-weight="700" fill="#f1f5f9">Candidate</text>
+    <text x="125" y="258" text-anchor="middle" font-size="14" fill="#94a3b8">correction, repeat,</text>
+    <text x="125" y="278" text-anchor="middle" font-size="14" fill="#94a3b8">recipe, instruction</text>
+
+    <g stroke="#64748b" stroke-width="2" fill="none">
+      <path d="M212 250H250"/>
+      <path d="M250 250V122M250 250V186M250 250V250M250 250V314M250 250V378" />
+      <path d="M250 122H290M250 186H290M250 250H290M250 314H290M250 378H290"/>
+    </g>
+
+    <!-- skill -->
+    <rect x="290" y="92" width="420" height="60" rx="12" fill="#312e81" stroke="#818cf8" stroke-width="2"/>
+    <text x="310" y="118" font-size="18" font-weight="700" fill="#eef2ff">skill</text>
+    <text x="310" y="140" font-size="14" fill="#c7d2fe">multi-step procedure, 2+ sessions, carries your decisions</text>
+    <text x="730" y="128" font-size="15" fill="#a5b4fc">→ ~/.claude/skills/&lt;name&gt;/SKILL.md</text>
+
+    <!-- memory -->
+    <rect x="290" y="156" width="420" height="60" rx="12" fill="#164e63" stroke="#22d3ee" stroke-width="2"/>
+    <text x="310" y="182" font-size="18" font-weight="700" fill="#ecfeff">memory</text>
+    <text x="310" y="204" font-size="14" fill="#a5f3fc">one-line preference or fact tied to one project</text>
+    <text x="730" y="192" font-size="15" fill="#67e8f9">→ the project's memory store</text>
+
+    <!-- claude-md -->
+    <rect x="290" y="220" width="420" height="60" rx="12" fill="#14532d" stroke="#4ade80" stroke-width="2"/>
+    <text x="310" y="246" font-size="18" font-weight="700" fill="#f0fdf4">claude-md</text>
+    <text x="310" y="268" font-size="14" fill="#bbf7d0">a rule you restated across several projects</text>
+    <text x="730" y="256" font-size="15" fill="#86efac">→ CLAUDE.md</text>
+
+    <!-- conflict -->
+    <rect x="290" y="284" width="420" height="60" rx="12" fill="#7c2d12" stroke="#fb923c" stroke-width="2"/>
+    <text x="310" y="310" font-size="18" font-weight="700" fill="#fff7ed">conflict</text>
+    <text x="310" y="332" font-size="14" fill="#fed7aa">your rule contradicts an existing skill or plugin</text>
+    <text x="730" y="320" font-size="15" fill="#fdba74">→ CLAUDE.md line saying which wins</text>
+
+    <!-- drop -->
+    <rect x="290" y="348" width="420" height="60" rx="12" fill="#1e293b" stroke="#64748b" stroke-width="2" stroke-dasharray="6 5"/>
+    <text x="310" y="374" font-size="18" font-weight="700" fill="#e2e8f0">drop</text>
+    <text x="310" y="396" font-size="14" fill="#94a3b8">Claude's own habits, one-offs, pasted material, questions</text>
+    <text x="730" y="384" font-size="15" fill="#94a3b8">→ listed in INDEX.md with a reason</text>
+
+    <text x="600" y="446" text-anchor="middle" font-size="15" fill="#94a3b8">Corrections and repeated long instructions are the strongest signal. Tool sequences count only when they show a choice you made.</text>
+  </g>
+</svg>
