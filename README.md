@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/zdanovichnick/skill-miner/releases/tag/v0.3.0"><img alt="version" src="https://img.shields.io/badge/version-0.3.0-6366f1"></a>
+  <a href="https://github.com/zdanovichnick/skill-miner/releases/tag/v0.4.0"><img alt="version" src="https://img.shields.io/badge/version-0.4.0-6366f1"></a>
   <img alt="node" src="https://img.shields.io/badge/node-%E2%89%A5%2018-339933">
   <img alt="dependencies" src="https://img.shields.io/badge/dependencies-none-22c55e">
   <a href="LICENSE"><img alt="license" src="https://img.shields.io/github/license/zdanovichnick/skill-miner"></a>
@@ -39,6 +39,7 @@ then, without waiting for the next full mining run.
 | `/skill-miner:mine --live` | Skips the transcript scan and proposes rules for the live mod's repeats alone — the quick pass after a toast |
 | `/skill-miner:accept <name>...` | Installs kept proposals: skills into `~/.claude/skills/<name>/`, memories and CLAUDE.md lines into their target file |
 | `/corrections [clear]` | Lists the corrections the live mod noticed as you typed them, repeats first; `clear` forgets them |
+| `/skill-miner:prune [--grace-days 14] [--grace-sessions 10]` | Finds generated skills never invoked since install and moves the ones you pick to `~/.claude/skill-miner/pruned/<date>/` |
 
 <p align="center">
   <img src="assets/example-session.svg" alt="Example session: mine, pick proposals, accept" width="100%">
@@ -82,6 +83,27 @@ plugin's own store (local, capped at 500 entries, ≤ 300 characters each):
 It records nothing from slash commands, pasted logs, task notifications, peer-session messages
 or subagent turns, and it never changes or drops the prompt: every hook calls `next(e)`.
 
+### Pruning what never triggers
+
+Every generated skill costs context on every turn, used or not. `scripts/prune.js` reads
+`installed.json` (and any skill folder carrying the `PROVENANCE.md` that `accept` leaves beside
+it), then counts, in the transcripts since each install, the `Skill` tool calls naming it and the
+times you typed `/<name>`. Nothing else in a transcript is read.
+
+<p align="center">
+  <img src="assets/prune.svg" alt="Prune: generated skills listed with sessions since install and triggers; one never triggered is offered for removal" width="100%">
+</p>
+
+> Illustration. Names and numbers are made up.
+
+- **never triggered**: older than the grace period, in days and in sessions, with no invocation.
+  These are offered for removal; nothing is pre-selected.
+- **too new to tell**: inside the grace period. Left alone.
+- **in use**: invoked at least once since install. Left alone.
+- A removed skill is moved to `~/.claude/skill-miner/pruned/<date>/<name>/`, not deleted; move it
+  back to undo. Its `installed.json` entry gets `prunedAt`, and a `pruned` decision keeps
+  `/skill-miner:mine` from proposing it again.
+
 ### Where a candidate ends up
 
 The command classifies each candidate, checks it against the skills you already have, and
@@ -110,14 +132,16 @@ restate your rules without URLs, hosts, accounts or secrets, and nothing reaches
 | `~/.claude/skill-miner/runs/<date>/` | Raw miner output: local, contains your prompt text |
 | `~/.claude/skill-miner/proposals/<date>/` | Drafts plus `PROVENANCE.md` and `INDEX.md` |
 | `~/.claude/skill-miner/decisions.json` | Kept/dropped/installed per proposal; dropped ones are not proposed again |
-| `~/.claude/skill-miner/installed.json` | What was installed where; `accept` warns past 8 generated skills |
+| `~/.claude/skill-miner/installed.json` | What was installed where, with `prunedAt` once pruned; `accept` points at `prune` past 8 generated skills |
+| `~/.claude/skill-miner/pruned/<date>/<name>/` | Skills `prune` moved out of `~/.claude/skills`; move one back to undo |
+| `~/.claude/skill-miner/runs/<date>/prune.md` | The use-since-install table `prune` reports from |
 | plugin store, key `corrections` | What the live mod noticed: text (≤ 300 chars), why, project folder name, session id, time |
 | `~/.claude/skill-miner/live/repeats.json` | Corrections typed 2+ times, grouped, with up to three quotes each; written by the mod, read by `mine.js` |
 | `~/.claude/skill-miner/live/handled.json` | Repeat keys already kept or dropped; written by `/skill-miner:mine`, read by the mod |
 
 ## Roadmap
 
-- [ ] Prune generated skills that never trigger
+- [x] Prune generated skills that never trigger (`/skill-miner:prune`, v0.4.0)
 - [x] A live mod that notices corrections as they happen (`/corrections`, v0.2.0)
 - [x] Feed the live mod's repeats into `/skill-miner:mine` as candidates, so a rule can be
       proposed the moment it repeats rather than on the next mining run (`--live`, v0.3.0)

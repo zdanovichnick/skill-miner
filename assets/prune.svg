@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="440" viewBox="0 0 1200 440" role="img" aria-labelledby="t d">
+  <title id="t">Prune</title>
+  <desc id="d">Illustrative terminal session: /skill-miner:prune lists generated skills with their use since install, marks one never triggered, asks before moving it aside. Names and numbers are made up.</desc>
+  <rect width="1200" height="440" rx="16" fill="#0b1020"/>
+  <rect width="1200" height="44" rx="16" fill="#1e293b"/>
+  <rect y="28" width="1200" height="16" fill="#1e293b"/>
+  <circle cx="30" cy="22" r="7" fill="#ef4444"/><circle cx="54" cy="22" r="7" fill="#f59e0b"/><circle cx="78" cy="22" r="7" fill="#22c55e"/>
+  <text x="600" y="28" text-anchor="middle" font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" fill="#94a3b8">claude — prune, illustrative example</text>
+
+  <g font-family="Consolas, 'Cascadia Mono', Menlo, 'DejaVu Sans Mono', monospace" font-size="17">
+    <text x="30" y="84" fill="#a5b4fc">&gt; /skill-miner:prune</text>
+    <text x="30" y="114" fill="#64748b">● 27 sessions since 2026-08-28; a trigger is a Skill call or a typed /name. Grace: 14 days, 10 sessions.</text>
+
+    <!-- table header -->
+    <text y="152" font-size="14" fill="#64748b"><tspan x="30">SKILL</tspan><tspan x="330">INSTALLED</tspan><tspan x="520">SESSIONS SINCE</tspan><tspan x="720">TRIGGERED</tspan><tspan x="880">LAST</tspan><tspan x="1010">STATUS</tspan></text>
+    <line x1="30" y1="162" x2="1170" y2="162" stroke="#1e293b" stroke-width="2"/>
+
+    <!-- rows -->
+    <text y="188" fill="#cbd5e1"><tspan x="30">release-notes</tspan><tspan x="330">41 d ago</tspan><tspan x="520">27</tspan><tspan x="720">6× in 5</tspan><tspan x="880">3 d ago</tspan><tspan x="1010" fill="#4ade80">in use</tspan></text>
+    <text y="216" fill="#cbd5e1"><tspan x="30">db-reset-local</tspan><tspan x="330">41 d ago</tspan><tspan x="520">27</tspan><tspan x="720">0×</tspan><tspan x="880">—</tspan><tspan x="1010" fill="#fbbf24">never triggered</tspan></text>
+    <text y="244" fill="#cbd5e1"><tspan x="30">pr-checklist</tspan><tspan x="330">5 d ago</tspan><tspan x="520">4</tspan><tspan x="720">0×</tspan><tspan x="880">—</tspan><tspan x="1010" fill="#64748b">too new to tell</tspan></text>
+
+    <!-- question -->
+    <g transform="translate(30 272)">
+      <rect width="1140" height="100" rx="10" fill="#111a33" stroke="#6366f1" stroke-width="2"/>
+      <text x="18" y="30" font-size="15" fill="#e2e8f0">Remove which never-triggered skills? (they move to ~/.claude/skill-miner/pruned/&lt;date&gt;/, not deleted)</text>
+      <text x="18" y="62" font-size="15" fill="#cbd5e1"><tspan fill="#818cf8">[x]</tspan><tspan x="56">db-reset-local</tspan><tspan x="230" fill="#64748b">Resets the local database the way you do it · installed 41 d ago, 27 sessions since</tspan></text>
+      <text x="18" y="86" font-size="14" fill="#475569">Space to toggle · Enter to confirm · nothing is pre-selected</text>
+    </g>
+
+    <text x="30" y="404" fill="#4ade80">✓ db-reset-local → ~/.claude/skill-miner/pruned/2026-10-08/db-reset-local/   pruned 1 of 1 candidates</text>
+    <text x="30" y="428" font-size="14" fill="#64748b">Unloads at the next session. /skill-miner:mine will not propose it again.</text>
+  </g>
+</svg>

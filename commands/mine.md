@@ -28,8 +28,8 @@ into a proposal; restate a rule in your own words with those generalized (`<api-
 
 ## 2. Inventory what already exists
 
-- Read `~/.claude/skill-miner/decisions.json` if present: skip every candidate already marked `dropped`
-  or `installed`.
+- Read `~/.claude/skill-miner/decisions.json` if present: skip every candidate already marked `dropped`,
+  `installed` or `pruned`.
 - Glob `~/.claude/skills/*/SKILL.md` and read each frontmatter `name`/`description`; include the
   plugin skills listed in this session.
 - Skim `~/.claude/CLAUDE.md` and the CLAUDE.md of each project the strongest candidates came from

@@ -18,7 +18,7 @@ its files before writing anything.
 1. If `~/.claude/skills/<name>/` already exists, do not overwrite it: ask whether to replace it,
    install under another name, or skip.
 2. Read `~/.claude/skill-miner/installed.json` (`{"installed": []}` when absent). If 8 or more entries
-   have `target: "skill"`, list them with their install dates and ask which to remove before
+   have `target: "skill"` without `prunedAt`, say so and suggest `/skill-miner:prune` before
    adding — generated skills that never trigger only cost context.
 3. Copy `SKILL.md` (and any `references/`) to `~/.claude/skills/<name>/`, and `PROVENANCE.md`
    beside it. Do not add provenance to `SKILL.md`.
