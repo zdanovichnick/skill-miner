@@ -1,0 +1,15 @@
+{
+  "name": "skill-miner-marketplace",
+  "description": "skill-miner — propose skills from how you actually use Claude Code.",
+  "owner": {
+    "name": "Nick Zdanovych"
+  },
+  "plugins": [
+    {
+      "name": "skill-miner",
+      "source": "./",
+      "description": "Mines your own Claude Code transcripts for repeated workflows and corrections, proposes skills or memories, and installs only the ones you approve.",
+      "version": "0.1.0"
+    }
+  ]
+}
